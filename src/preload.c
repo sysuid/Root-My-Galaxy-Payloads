@@ -260,8 +260,19 @@ __attribute__((constructor)) static void load(void) {
     }
 #if defined(APP_PAYLOAD) && APP_PAYLOAD
     if (attempt < max_attempts) {
-      pr_info("safe retry quiet delay seconds=5\n");
-      sleep(5);
+      /*
+       * Run 20260810-201408 was killed (137) during attempt 3's stage-2
+       * before any gate attempt, with no attempt 4 -- the runner aborts the
+       * whole payload within an external wall-clock cap.  The hardcoded 5s
+       * quiet delay between attempts is pure budget waste (24 x 5s = 120s of
+       * sleep alone), so default to 1s.  FRESH mode re-forks a fresh process
+       * with its own heap shaping per attempt, so the longer settle window is
+       * not needed; QUIET_RETRY_DELAY_SEC can raise it if a run regresses.
+       */
+      int quiet_delay = env_int(
+          "QUIET_RETRY_DELAY_SEC", 1, 0, 60);
+      pr_info("safe retry quiet delay seconds=%d\n", quiet_delay);
+      sleep((unsigned int)quiet_delay);
     }
 #endif
   }

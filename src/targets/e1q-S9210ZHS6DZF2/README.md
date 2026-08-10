@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 7060D9EB3A41795E9B8F4C06B5F2D60C84D2EB92CE72026D43A99C74DBD03573
+SHA-256: 9CB66698B9EC4AB549BD82FDF293AE673DF6B85D0D66DFA9A71F4A6C69263DA4
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -71,6 +71,19 @@ now applies the same 36GB identity bounds + slab-object clamp as stage-2, so
 pipe pages and the stage-2 payload live in the same 0xffffff80..0xffffff88
 region (a stage-1 leak outside the 36GB window previously made overlap
 impossible by construction) and stage-1 scans are ~2x faster.
+
+Device log 20260810-201408 confirmed the stage-1 bound works
+(`candidates=4718592`) and stage-1 succeeded in attempt 3
+(`max_candidate=ffffff8843ff6000` -> `p0 pipe oracle prepared base=ffffff8843ff0000`),
+but the whole payload was killed (137) during attempt 3's stage-2 before any
+gate attempt and no attempt 4 ran -- the runner aborts within an external
+wall-clock cap, and the hardcoded 5s quiet retry delay was pure budget waste
+(24 x 5s = 120s of sleep).  The quiet delay is now 1s default (env
+`QUIET_RETRY_DELAY_SEC`), and `prepare_pipe_buffer_page` logs stage-1
+`elapsed_ms` so the real time split is visible.  The identity window is NOT
+narrowed further: run 200258 (unbounded stage-1) found pipe leaks at
+`ffffff8923ec0000`/`ffffff894b620000` just above 0xffffff8900000000, so the
+36GB bound is kept to avoid cutting off stage-1 leak locations.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

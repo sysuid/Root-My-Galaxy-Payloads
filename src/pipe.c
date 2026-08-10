@@ -301,6 +301,7 @@ uintptr_t prepare_pipe_buffer_page(void) {
   }
   pipe_objects_ready = 1;
 
+  size_t pipe_started = gettime_ns();
   int result_pipe[2];
   SYSCHK(pipe(result_pipe));
   pid_t child = SYSCHK(fork());
@@ -328,8 +329,12 @@ uintptr_t prepare_pipe_buffer_page(void) {
   uintptr_t base = 0;
   ssize_t got = read(result_pipe[0], &base, sizeof(base));
   SYSCHK(close(result_pipe[0]));
+  size_t pipe_elapsed_ms = (size_t)((gettime_ns() - pipe_started) / 1000000ULL);
   if (got != (ssize_t)sizeof(base)) {
     pr_error("pipe page child did not report base\n");
+  } else {
+    pr_info("pipe KernelSnitch page child base=%016zx direct=%d elapsed_ms=%zu\n",
+            base, is_direct_ptr(base) ? 1 : 0, pipe_elapsed_ms);
   }
   for (size_t i = 0; i < PIPE_DRAIN; i++) {
     close(pipe_fds_drain[i][0]);
