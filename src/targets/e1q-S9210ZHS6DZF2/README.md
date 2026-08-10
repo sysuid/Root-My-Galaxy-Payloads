@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 58E90DF9A498CF713C3525B334984BCAC8B0A209C58FB82B853F6CDAA1F91C64
+SHA-256: 7060D9EB3A41795E9B8F4C06B5F2D60C84D2EB92CE72026D43A99C74DBD03573
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -60,6 +60,17 @@ candidate rejected base=ffffff883a048000 max=ffffff8080000000`, discarding
 successful stage-2 leaks before any gate attempt.  e1q Snapdragon leaks land
 in 0xffffff80..0xffffff88, so the ceiling is now `0xffffff8900000000` (matching
 `APP_KERNEL_PAGE_KSNITCH_IDENTITY_END`).
+
+Device log 20260810-200258 confirmed the ceiling fix (stage-2 now reaches the
+gate write in attempts 7/15/16: `mm leaked=ffffff883a04a000 object_index=8`,
+`ffffff8834965000 object_index=21`, `ffffff883767a000 object_index=8`; all
+`p0 physical write status=0 ok=1`), but the p0 gate still `hits=0 changed=0`
+and stage-1 pipe leak became the dominant failure (15/24 attempts died at
+`pipe page child did not report base`).  `setup_kernelsnitch()` (stage-1)
+now applies the same 36GB identity bounds + slab-object clamp as stage-2, so
+pipe pages and the stage-2 payload live in the same 0xffffff80..0xffffff88
+region (a stage-1 leak outside the 36GB window previously made overlap
+impossible by construction) and stage-1 scans are ~2x faster.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that
