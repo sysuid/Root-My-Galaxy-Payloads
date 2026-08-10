@@ -65,6 +65,15 @@
 #ifndef MM_ORDER
 #define MM_ORDER 3
 #endif
+/*
+ * mm_struct slab cache order used by KernelSnitch (bruteforce slab step and
+ * per-slab object count).  Distinct from MM_ORDER, which sizes the reclaimed
+ * 32K kernel page (ORDER3_SIZE) for the p0 pipe-buffer oracle / slide bank.
+ * Defaults to MM_ORDER so targets that do not opt in keep the old behaviour.
+ */
+#ifndef MM_SLAB_ORDER
+#define MM_SLAB_ORDER MM_ORDER
+#endif
 #ifndef KERNELSNITCH_VERBOSE
 #define KERNELSNITCH_VERBOSE 0
 #endif

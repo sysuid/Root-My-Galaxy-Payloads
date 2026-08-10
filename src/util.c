@@ -302,7 +302,7 @@ void setup_kernelsnitch(void) {
   int cpu_count = (int)sysconf(_SC_NPROCESSORS_ONLN);
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
   ks = kernelsnitch_setup(
-      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS,
+      MM_STRUCT_SZ, MM_SLAB_ORDER, cpu_count, KSNITCH_COLLISIONS,
       KERNELSNITCH_VERBOSE, KERNELSNITCH_MTE_ENABLED);
   configure_kernelsnitch_profile(ks, PAGE_PAYLOAD_SLIDE);
 #else
@@ -313,7 +313,7 @@ void setup_kernelsnitch(void) {
    * the extra logging.
    */
   ks = kernelsnitch_setup(
-      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS,
+      MM_STRUCT_SZ, MM_SLAB_ORDER, cpu_count, KSNITCH_COLLISIONS,
       KERNELSNITCH_VERBOSE, KERNELSNITCH_MTE_ENABLED);
 #if defined(APP_PHYS_P0_ORACLE) && APP_PHYS_P0_ORACLE
   kernelsnitch_set_profile(
@@ -1028,7 +1028,7 @@ uintptr_t prepare_kernel_page(int payload_mode) {
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
   cleanup_page_prepare_state();
 #endif
-  mm_objs_per_slab = ORDER3_SIZE / MM_STRUCT_SZ;
+  mm_objs_per_slab = (PAGE_SIZE << MM_SLAB_ORDER) / MM_STRUCT_SZ;
   prepare_ctxs();
 
   skb_buf = malloc(SKB_SEND_SIZE);
@@ -1049,7 +1049,7 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   int cpu_count = (int)sysconf(_SC_NPROCESSORS_ONLN);
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
   ks = kernelsnitch_setup(
-      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS,
+      MM_STRUCT_SZ, MM_SLAB_ORDER, cpu_count, KSNITCH_COLLISIONS,
       KERNELSNITCH_VERBOSE, KERNELSNITCH_MTE_ENABLED);
 #if defined(APP_PAYLOAD) && APP_PAYLOAD && \
     defined(APP_KERNEL_PAGE_KSNITCH_IDENTITY_END) && \
@@ -1069,7 +1069,7 @@ uintptr_t prepare_kernel_page(int payload_mode) {
   configure_kernelsnitch_profile(ks, payload_mode);
 #else
   ks = kernelsnitch_setup(
-      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS, 0, 0);
+      MM_STRUCT_SZ, MM_SLAB_ORDER, cpu_count, KSNITCH_COLLISIONS, 0, 0);
 #if defined(APP_PAYLOAD) && APP_PAYLOAD && \
     defined(SLIDE_KSNITCH_APPENDED_FUTEXES)
   if (payload_mode == PAGE_PAYLOAD_SLIDE) {

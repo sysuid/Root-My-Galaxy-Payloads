@@ -147,7 +147,7 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   struct mm_ctx spray;
   struct mm_ctx pre;
   struct mm_ctx post;
-  size_t objs_per_slab = ORDER3_SIZE / MM_STRUCT_SZ;
+  size_t objs_per_slab = (PAGE_SIZE << MM_SLAB_ORDER) / MM_STRUCT_SZ;
 
   init_ctx(&prep, 32 * objs_per_slab);
   init_ctx(&spray, (1 + MM_PARTIALS) * objs_per_slab);
