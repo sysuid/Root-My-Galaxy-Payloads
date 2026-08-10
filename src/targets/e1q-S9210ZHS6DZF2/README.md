@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 98477E22AC640B942CE1D4FF413E189F9984C5375807916EDF2C2D25B41CB3EA
+SHA-256: A2EF18264EBD8DDE2A85057E319D859B17C7E503490BDC5F1B1EF13E32A3A0A5
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -121,6 +121,18 @@ attempt 18 where the pipe base and stage-2 payload base were the SAME
 gate overlap; the skb reclaim grabs a different page than the 240 held pipe
 pages even from the same pool.  The gate overlap requires a mechanism change
 (UAF / dangling pipe reference), not more constant tuning.
+
+Device log 20260810-210253 confirmed the stage-1 retry fix works: attempt 2
+succeeded on try 3 (`p0 pipe oracle stage-1 try=3/3 ok base=ffffff8062b98000`)
+-- a success a single-try build would have missed.  But attempt 1 burned 3
+full tries with the mm pool empty (~15-20s of waste), and the run was killed
+(137) by the external wall-clock cap during attempt 2's stage-2 (which leaked
+0/3 that round).  `APP_P0_PIPE_ORACLE_ATTEMPTS` is now 2: under the tight
+~50-60s external cap, more attempts at ~51% stage-1 success beat fewer at
+~66%.  Suspected gate root cause: e1s/e2s use MM_SLAB_ORDER=3 (32K mm slab)
+whose larger freed chunks feed the pipe-page/payload double-allocation the
+gate needs, while e1q's MM_SLAB_ORDER=0 (4K, required for the mm-leak grid)
+may structurally prevent the overlap.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

@@ -157,11 +157,16 @@
  * try on e1q, but stage-1 is fast (run 20260810-202406: elapsed_ms=5435) and
  * the whole payload is killed (137) by an external wall-clock cap at ~45-60s,
  * so only the first 1-2 attempts can reach the gate.  Retrying stage-1 a few
- * times inside the attempt (3 x ~5.4s + stage-2 ~10s ~= 27s, within the 45s
- * p0 timeout) lifts per-attempt stage-1 success to ~66% instead of aborting
- * the whole attempt on the first miss.
+ * times inside the attempt lifts per-attempt stage-1 success instead of
+ * aborting the whole attempt on the first miss.  Run 20260810-210253 proved
+ * the retry engages (attempt 2 succeeded on try 3), but attempt 1 burned 3
+ * full tries (~15-20s) with the mm pool empty the whole round, and the run
+ * was killed (137) by the external cap during attempt 2's stage-2.  Under a
+ * tight ~50-60s external cap, 2 tries (2 x ~5.4s + stage-2 ~10s ~= 21s,
+ * within the 45s p0 timeout) maximizes expected pipeline completions per run:
+ * more attempts each at ~51% stage-1 success beat fewer attempts at ~66%.
  */
-#define APP_P0_PIPE_ORACLE_ATTEMPTS 3
+#define APP_P0_PIPE_ORACLE_ATTEMPTS 2
 #define DEFAULT_EXPLOIT_ATTEMPTS 1
 #define DEFAULT_ATTEMPT_TIMEOUT_SEC 2200
 #define DEFAULT_P0_ATTEMPT_TIMEOUT_SEC 1200

