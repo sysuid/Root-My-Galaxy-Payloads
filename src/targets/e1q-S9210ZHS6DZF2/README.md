@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 3F1671A287599297CD95D578B59B03752D5B93BB63E74504D958A051B0946CD4
+SHA-256: 98477E22AC640B942CE1D4FF413E189F9984C5375807916EDF2C2D25B41CB3EA
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -104,6 +104,23 @@ had stage-2 leak 0/6 (all threads `max_matches=2/4`, one 3/4 at
 affecting both stages (in 200258 stage-2 leaked 3/3 when reached).  Ensure
 the device fetches the fresh payload (clear the local files/payloads cache)
 before retesting.
+
+Device log 20260810-203930 (full 24 attempts, artifact confirmed via 8x
+`p0 pipe oracle stage-1 try=1/3 ok`) proved the stage-1 retry NEVER engaged:
+all 16 stage-1 failures exited the ATTEMPT with `status=255` right after
+`pipe page child did not report base`, with ZERO `stage-1 try=2/3` lines.
+ROOT CAUSE: `pr_error()` calls `exit(-1)` (kernelsnitch/utils.h), so the
+failure path in `prepare_pipe_buffer_page` killed the attempt before the
+retry loop could iterate.  Changed to `pr_warning` so the retry can now run
+up to 3x per attempt.
+
+CRITICAL gate finding from 203930: 8 attempts reached `p0 physical write
+status=0 ok=1` and ALL showed `p0 pipe gate hits=0 changed=0` -- including
+attempt 18 where the pipe base and stage-2 payload base were the SAME
+(`ffffff80630e8000`).  The range-aligned FRESH approach is DISPROVEN for the
+gate overlap; the skb reclaim grabs a different page than the 240 held pipe
+pages even from the same pool.  The gate overlap requires a mechanism change
+(UAF / dangling pipe reference), not more constant tuning.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

