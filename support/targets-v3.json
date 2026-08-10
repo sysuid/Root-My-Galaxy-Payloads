@@ -92,6 +92,20 @@
       }
     },
     {
+      "payloadId": "e1q-S9210ZHS6DZF2",
+      "displayName": "Galaxy S24 | Kernel 6.1.145",
+      "models": ["SM-S9210"],
+      "kernelVersions": ["6.1.145"],
+      "exploit": {
+        "url": "https://raw.githubusercontent.com/sysuid/Root-My-Galaxy-Payloads/main/artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so",
+        "size": 104128
+      },
+      "kernelsu": {
+        "url": "https://raw.githubusercontent.com/sysuid/Root-My-Galaxy-Payloads/main/kernelsu/ksud-e1q-S9210ZHS6DZF2-kdp",
+        "size": 4781592
+      }
+    },
+    {
       "payloadId": "e2s-S926BXXUEDZDR",
       "displayName": "Galaxy S24+ | Kernel 6.1.157",
       "models": ["SM-S926B"],
