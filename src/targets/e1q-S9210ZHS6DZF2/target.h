@@ -101,7 +101,18 @@
 #define APP_SLIDE_MIN_OBJECT_INDEX 0
 #define APP_SLIDE_MAX_OBJECT_INDEX 33
 #define APP_FOPS_MIN_OBJECT_INDEX 24
-#define APP_RECLAIM_MAX_DIRECT_BASE 0xffffff8080000000ULL
+/*
+ * e1q device-calibrated direct-map ceiling for the reclaimed 32K page.
+ * The copied S24-family 0xffffff8080000000 (2GB) was calibrated on e1s/e2s
+ * (Exynos 2400) whose mm_struct slab sits below 2GB.  e1q (Snapdragon 8 Gen 3)
+ * on-device stage-2 leaks land in 0xffffff80..0xffffff88 (e.g.
+ * leaked=ffffff883a048000 base=ffffff883a048000 object_index=8 in run
+ * 20260810-194950), and the 2GB ceiling rejected every high candidate
+ * ("mm reclaim candidate rejected base=ffffff883a048000 max=ffffff8080000000")
+ * even though the leak succeeded 4/4.  Raise it to 0xffffff8900000000 to match
+ * APP_KERNEL_PAGE_KSNITCH_IDENTITY_END so all in-range leaks are accepted.
+ */
+#define APP_RECLAIM_MAX_DIRECT_BASE 0xffffff8900000000ULL
 #define APP_FOPS_PSELECT_DELAY_USEC 50000
 #define SLIDE_SYNC_PSELECT_SYSCALL 1
 #define SLIDE_GUARD_PSELECT_SYSCALL 1

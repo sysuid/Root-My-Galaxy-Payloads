@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 4BD15D2DB13F1BA4ED1A116D122B0A5049C10B969AB134E69867D87253E2BBCB
+SHA-256: 58E90DF9A498CF713C3525B334984BCAC8B0A209C58FB82B853F6CDAA1F91C64
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -50,6 +50,16 @@ KernelSnitch search is now bounded to `0xffffff8000000000`..`0xffffff8900000000`
 `kernelsnitch_set_search_bounds` is clamped to the 4K mm slab object count
 (e1q `MM_SLAB_ORDER=0`/`0x3c0` → 4 objects/slab) so its ASSERT holds, while
 the post-leak in-page window stays `0..33`.
+
+Device log 20260810-194950 showed stage-2 leaks now succeeding 4/4 inside
+the bounded window, but `APP_RECLAIM_MAX_DIRECT_BASE 0xffffff8080000000`
+(the S24-family copy, calibrated for e1s/e2s Exynos low-2GB mm slabs)
+rejected every high-address candidate (e.g. `leaked=ffffff883a048000`
+`base=ffffff883a048000` `object_index=8`, also 12/17) with `mm reclaim
+candidate rejected base=ffffff883a048000 max=ffffff8080000000`, discarding
+successful stage-2 leaks before any gate attempt.  e1q Snapdragon leaks land
+in 0xffffff80..0xffffff88, so the ceiling is now `0xffffff8900000000` (matching
+`APP_KERNEL_PAGE_KSNITCH_IDENTITY_END`).
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that
