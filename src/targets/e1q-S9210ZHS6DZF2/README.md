@@ -16,8 +16,14 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: B95361DA228110D05D6AE291A1B4DB4EE4BE646D9B50CB2C0CEC20CC27732F81
+SHA-256: 2AA773E9A53337F334CEBAEC11CD0E3DA2BC2F7CE76B55DF71FB6C93E553E804
 ```
+
+The profile was audited against the exact raw kernel and the recovered
+`vmlinux.elf`. Three firmware-derived constants were corrected during that
+audit: `P0_KERNEL_PHYS_LOAD` (`0x80080000`, Qualcomm ABL), the
+`boot_id` ctl-table data pointer (`0x023762f0`), and the
+`worker_thread` saved-return caller offset (`0x000db1a0`).
 
 This profile is a controlled device-validation candidate. It is not in the
 runtime support feed because no exact-release KernelSU late-load artifact has
