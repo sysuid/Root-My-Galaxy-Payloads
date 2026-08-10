@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: CF78B3D9FB53865A8BDC5065681480783C670E73CAB6C51FB0C42ABCB32B3200
+SHA-256: 4BD15D2DB13F1BA4ED1A116D122B0A5049C10B969AB134E69867D87253E2BBCB
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -38,6 +38,18 @@ window was calibrated for `MM_STRUCT_SZ=0x400` (e1s/e2s); e1q's
 image-verified `MM_STRUCT_SZ=0x3c0` yields a denser grid and on-device leaks
 land at object_index 8..25, so the window is now `0..33`.  `APP_FOPS_MIN_OBJECT_INDEX`
 stays at `24` (unverified FOPS path unchanged).
+
+Device log 20260810-192328 showed stage-2 leak 0/3 all failing while every
+thread scanned the full 64GB identity (`candidates=8388608`/thread, ~5s per
+leak); the app's 45s p0 timeout killed the attempt (137) after only 3 retries
+of the 8 configured setup attempts.  Following the validated S24-family
+profiles (e1s/e2s set `APP_KERNEL_PAGE_KSNITCH_IDENTITY_END`), the stage-2
+KernelSnitch search is now bounded to `0xffffff8000000000`..`0xffffff8900000000`
+(36GB, covering the on-device leak range 0xffffff80..0xffffff88) with
+`APP_KERNEL_PAGE_KSNITCH_EXACT_PARTITION`.  The object index handed to
+`kernelsnitch_set_search_bounds` is clamped to the 4K mm slab object count
+(e1q `MM_SLAB_ORDER=0`/`0x3c0` → 4 objects/slab) so its ASSERT holds, while
+the post-leak in-page window stays `0..33`.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

