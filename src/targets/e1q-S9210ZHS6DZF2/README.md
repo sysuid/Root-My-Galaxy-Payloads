@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: D6A790A5A78E752167C3FF369A8E8F43268C8A80B6FB3231D4BBCF1E0FC9704D
+SHA-256: BB40E89F2D3A346599BA5EA13A09F6A38E4563740201EDAB784FCE7C3813FCAC
 ```
 
 The profile was audited against the exact raw kernel and the recovered
@@ -25,7 +25,9 @@ audit: `P0_KERNEL_PHYS_LOAD` (`0x80080000`, Qualcomm ABL), the
 `boot_id` ctl-table data pointer (`0x023762f0`), and the
 `worker_thread` saved-return caller offset (`0x000db1a0`).
 
-This profile is a controlled device-validation candidate. It is not in the
-runtime support feed because no exact-release KernelSU late-load artifact has
-been built and audited. An artifact for another model or full kernel release
-must not be substituted.
+This profile is published in the runtime support feed (`support/targets-v3.json`)
+with the exact-release KernelSU late-load pair. The P0 fingerprint row ordering
+was re-audited byte-for-byte against the raw Image and restored to the
+generator-forward convention (`row S = X[(0x1f0000 − S)]`), correcting an
+earlier e3q-mirrored reversal that contradicted the Image. An artifact for
+another model or full kernel release must not be substituted.
