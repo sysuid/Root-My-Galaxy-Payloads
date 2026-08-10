@@ -212,7 +212,11 @@ void futex_init(void)
         futex_hashsize <<= 1;
 #endif
 #else
+#ifdef KERNELSNITCH_FUTEX_HASH_SIZE
+    futex_hashsize = KERNELSNITCH_FUTEX_HASH_SIZE;
+#else
     futex_hashsize = SYSCHK(sysconf(_SC_NPROCESSORS_ONLN) * 256);
+#endif
 #endif
     pr_info("KernelSnitch futex_hashsize=%lx online_cpus=%ld\n",
             futex_hashsize, (long)sysconf(_SC_NPROCESSORS_ONLN));

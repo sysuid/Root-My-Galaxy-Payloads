@@ -29,15 +29,18 @@
 #define KERNELSNITCH_MTE_ENABLED 0
 #define KERNELSNITCH_VERBOSE 1
 /*
- * Image-derived: futex_init() computes
- * roundup_pow_of_two(num_possible_cpus() * 256); the S9210ZHS6DZF2 DTB has 8
- * cpu nodes (verified in vendor_boot.img), so the real futex hash table is
- * 0x800 buckets.  The e1q app build runs the non-FRESH KernelSnitch path
- * (futex_hashsize = online_cpus * 256 = 0x800), which matches; this define
- * only matters if APP_REQUIRE_FRESH_P0_SESSION is ever enabled, and must stay
- * 0x800 (the S24-family 0x1000 value is wrong for this 8-core kernel).
+ * Device-derived (2026-08-10 diagnostic run): with the sim at 0x800 the
+ * bruteforce reached max_matches=4/4 in only 2/24 attempts (8%), exactly the
+ * (1/2)^4 pattern of a one-bit-too-fine sim mask.  Real kernel collisions are
+ * found with ~200x margins, so the side channel works; a sim mask that is
+ * finer than the kernel's bucket mask only aligns each collision pair with
+ * p=1/2, and all four only 1/16 of the time.  The only consistent kernel
+ * hash table size is therefore 0x400 (finer than 0x800).  0x400 also works if
+ * the kernel is actually coarser (subset mask => guaranteed match), so it is
+ * the safe value.  (Static disassembly of futex_init suggested 0x800 from 8
+ * DT cpu nodes, but the device behavior is the ground truth.)
  */
-#define KERNELSNITCH_FUTEX_HASH_SIZE 0x800
+#define KERNELSNITCH_FUTEX_HASH_SIZE 0x400
 #define KSNITCH_COLLISIONS 5
 #define KERNELSNITCH_COLLISION_CONFIRMATIONS 3
 #define APP_SLIDE_RECLAIM_SENDS 192
