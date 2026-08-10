@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 1A238959A647D96C1278F68BCB0310FFFC975F8824DB7B0560BCA95F0B78721A
+SHA-256: 3F1671A287599297CD95D578B59B03752D5B93BB63E74504D958A051B0946CD4
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -93,6 +93,17 @@ means only the first 1-2 attempts can reach the gate, yet stage-1 succeeded
 only 1/5 (attempts 1-4 died at stage-1).  `slide_leak_physical_base` now
 retries stage-1 in-attempt (`APP_P0_PIPE_ORACLE_ATTEMPTS 3`, ~27s total within
 the 45s p0 timeout), lifting per-attempt stage-1 success to ~66%.
+
+Device log 20260810-202712 showed NO `p0 pipe oracle stage-1 try=N/3` lines
+(even on failures) -- the run consumed a device-local payload cache, not the
+pushed 1A238959 artifact which already contained the stage-1 retry.  A
+success-path log (`p0 pipe oracle stage-1 try=N/3 ok base=...`) was added so
+a run's log unambiguously shows which artifact is deployed.  This run also
+had stage-2 leak 0/6 (all threads `max_matches=2/4`, one 3/4 at
+`ffffff88a57a8780`), confirming the mm-leak reliability is a per-run variable
+affecting both stages (in 200258 stage-2 leaked 3/3 when reached).  Ensure
+the device fetches the fresh payload (clear the local files/payloads cache)
+before retesting.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

