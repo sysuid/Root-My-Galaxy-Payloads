@@ -20,7 +20,13 @@
 #define SKB_DATA_DELTA (-0x1000LL)
 #define MM_STRUCT_SZ 0x3c0
 #define MM_ORDER 3
-#define KERNELSNITCH_MTE_ENABLED 1
+/*
+ * MTE is left DISABLED for KernelSnitch: disassembly of get_futex_key shows
+ * key->private.mm = current->mm is stored untagged, so the untagged bruteforce
+ * candidate is the correct one.  Enabling it would only add a 16x slower tag
+ * scan without helping.
+ */
+#define KERNELSNITCH_MTE_ENABLED 0
 #define KERNELSNITCH_VERBOSE 1
 /*
  * Image-derived: futex_init() computes

