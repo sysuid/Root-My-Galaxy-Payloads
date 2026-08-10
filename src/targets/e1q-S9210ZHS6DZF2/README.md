@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 9BDB60BB3381FCB52A050786B1CE62662DD83EF79ADDB42612B5C1504457CEB2
+SHA-256: CF78B3D9FB53865A8BDC5065681480783C670E73CAB6C51FB0C42ABCB32B3200
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -30,6 +30,14 @@ write at `pipebuf_page_base+0x800` gets a fresh chance to land on a
 pipe_buffer `.page`. Fingerprint stays generator-forward; `MM_SLAB_ORDER=0`,
 futex hash `0x400` and the `4096/128/8` KernelSnitch profile remain
 device-validated.
+
+Device log 20260810-191514 (first FRESH run) showed stage-2 leaking a valid
+`mm_struct` (`object_index=25`) that the copied S24-family `27..30` object
+window rejected (`min=27`), blocking FRESH before any gate attempt.  That
+window was calibrated for `MM_STRUCT_SZ=0x400` (e1s/e2s); e1q's
+image-verified `MM_STRUCT_SZ=0x3c0` yields a denser grid and on-device leaks
+land at object_index 8..25, so the window is now `0..33`.  `APP_FOPS_MIN_OBJECT_INDEX`
+stays at `24` (unverified FOPS path unchanged).
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

