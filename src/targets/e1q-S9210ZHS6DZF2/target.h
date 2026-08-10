@@ -152,6 +152,16 @@
 #define APP_FOPS_FRESH_PAGE_ATTEMPTS 8
 #define APP_FOPS_KERNEL_PAGE_SEARCH_BATCHES 16
 #define FOPS_KERNEL_PAGE_SETUP_ATTEMPTS 8
+/*
+ * Stage-1 (pipe oracle) leak is the gatekeeper and succeeds only ~20-40% per
+ * try on e1q, but stage-1 is fast (run 20260810-202406: elapsed_ms=5435) and
+ * the whole payload is killed (137) by an external wall-clock cap at ~45-60s,
+ * so only the first 1-2 attempts can reach the gate.  Retrying stage-1 a few
+ * times inside the attempt (3 x ~5.4s + stage-2 ~10s ~= 27s, within the 45s
+ * p0 timeout) lifts per-attempt stage-1 success to ~66% instead of aborting
+ * the whole attempt on the first miss.
+ */
+#define APP_P0_PIPE_ORACLE_ATTEMPTS 3
 #define DEFAULT_EXPLOIT_ATTEMPTS 1
 #define DEFAULT_ATTEMPT_TIMEOUT_SEC 2200
 #define DEFAULT_P0_ATTEMPT_TIMEOUT_SEC 1200
